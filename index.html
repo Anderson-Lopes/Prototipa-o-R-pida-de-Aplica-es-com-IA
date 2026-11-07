@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <title>Energia Clara · Painel de energia</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17251f;
+      --muted: #75827b;
+      --line: #e8ece8;
+      --canvas: #f5f7f4;
+      --surface: #fff;
+      --green: #237b55;
+      --green-dark: #185e40;
+      --green-pale: #eaf5ee;
+      --lime: #d6ef8d;
+      --amber: #a76b14;
+      --amber-pale: #fff4df;
+      --red: #bd4d44;
+      --red-pale: #fff0ed;
+      --shadow: 0 2px 12px rgb(22 44 31 / 4%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-size: 14px; }
+    button, input, select { font: inherit; }
+    button, a, input, select { accent-color: var(--green); }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid #78b694; outline-offset: 3px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .skip-link { position: absolute; top: -50px; left: 16px; z-index: 20; padding: 10px 14px; background: white; border-radius: 8px; }
+    .skip-link:focus { top: 12px; }
+
+    .layout { min-height: 100vh; }
+    .sidebar {
+      position: fixed; inset: 0 auto 0 0; width: 238px; padding: 25px 16px 18px;
+      display: flex; flex-direction: column; background: #fff; border-right: 1px solid var(--line); z-index: 5;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 30px; text-decoration: none; }
+    .brand-mark { display: grid; width: 36px; height: 36px; place-items: center; background: var(--green); color: white; border-radius: 12px; font-size: 19px; }
+    .brand-name { font-size: 16px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-name span { color: var(--green); }
+    .nav-label { padding: 0 12px 9px; color: #9aa49e; font-size: 10px; font-weight: 750; letter-spacing: 1.1px; text-transform: uppercase; }
+    .nav { display: grid; gap: 5px; }
+    .nav a { display: flex; gap: 12px; align-items: center; padding: 11px 12px; color: #68756d; border-radius: 9px; text-decoration: none; font-weight: 560; }
+    .nav a:hover, .nav a[aria-current="page"] { color: var(--green-dark); background: var(--green-pale); }
+    .nav-icon { width: 18px; text-align: center; font-size: 16px; }
+    .sidebar-bottom { margin-top: auto; }
+    .help-card { padding: 15px; background: #f5f8f4; border: 1px solid var(--line); border-radius: 12px; }
+    .help-card strong { display: block; margin-bottom: 5px; font-size: 12px; }
+    .help-card p { margin: 0 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .text-button { padding: 0; color: var(--green); background: transparent; border: 0; font-size: 11px; font-weight: 700; }
+    .profile { display: flex; align-items: center; gap: 10px; padding: 17px 7px 0; }
+    .avatar { display: grid; width: 34px; height: 34px; place-items: center; color: var(--green-dark); background: var(--green-pale); border-radius: 50%; font-size: 11px; font-weight: 750; }
+    .profile-copy { min-width: 0; flex: 1; }
+    .profile-copy strong, .profile-copy span { display: block; }
+    .profile-copy strong { font-size: 11px; }
+    .profile-copy span { margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .role-select { max-width: 91px; padding: 5px 2px; color: var(--muted); background: #fff; border: 0; font-size: 10px; }
+
+    .main { max-width: 1600px; margin-left: 238px; padding: 25px 38px 55px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 27px; }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .select-wrap { display: flex; align-items: center; gap: 9px; padding: 8px 11px; background: #fff; border: 1px solid var(--line); border-radius: 9px; }
+    .select-wrap span { color: var(--muted); font-size: 11px; }
+    .select-wrap select { max-width: 185px; color: var(--ink); background: transparent; border: 0; font-size: 11px; font-weight: 650; }
+    .icon-button { position: relative; width: 38px; height: 38px; background: white; border: 1px solid var(--line); border-radius: 10px; }
+    .notification-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; background: #e77a52; border: 1px solid white; border-radius: 50%; }
+    .mobile-brand { display: none; }
+
+    .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    .eyebrow { margin-bottom: 7px; color: var(--green); font-size: 10px; font-weight: 750; letter-spacing: 1.1px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(24px, 3vw, 30px); letter-spacing: -1px; line-height: 1.2; }
+    .subtitle { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .date-label { padding: 8px 11px; color: #5e6b63; background: white; border: 1px solid var(--line); border-radius: 8px; font-size: 11px; }
+    .demo-banner { display: flex; align-items: center; gap: 9px; margin-bottom: 17px; padding: 10px 13px; color: #67562f; background: #fff9e9; border: 1px solid #f1e5c4; border-radius: 9px; font-size: 11px; line-height: 1.5; }
+    .demo-banner strong { color: #7d5d15; }
+    .demo-banner span:last-child { color: #86764e; }
+
+    .status-strip { display: flex; align-items: center; gap: 10px; margin-bottom: 17px; padding: 11px 14px; background: white; border: 1px solid var(--line); border-radius: 10px; font-size: 11px; }
+    .status-indicator { width: 8px; height: 8px; flex: 0 0 8px; background: #d89c35; border-radius: 50%; }
+    .status-strip strong { color: #805d1f; }
+    .status-strip .status-meta { margin-left: auto; color: var(--muted); }
+
+    .grid { display: grid; gap: 16px; }
+    .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+    .card { min-width: 0; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+    .metric-card { min-height: 135px; }
+    .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #657269; font-size: 11px; }
+    .metric-symbol { display: grid; width: 28px; height: 28px; place-items: center; color: var(--green); background: var(--green-pale); border-radius: 8px; font-size: 14px; }
+    .metric-value { margin: 13px 0 4px; font-size: 25px; font-weight: 730; letter-spacing: -.8px; }
+    .metric-detail { color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .positive { color: var(--green); font-weight: 680; }
+    .warning-text { color: var(--amber); font-weight: 680; }
+    .solar-mix { display: flex; height: 5px; margin-top: 11px; overflow: hidden; background: #eff2ef; border-radius: 8px; }
+    .solar-mix span:first-child { width: 68%; background: #80bf92; }
+    .solar-mix span:last-child { width: 32%; background: #c4d4cb; }
+    .legend { display: flex; gap: 12px; margin-top: 6px; color: var(--muted); font-size: 9px; }
+    .legend i { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; }
+
+    .main-grid { grid-template-columns: minmax(0, 1.65fr) minmax(265px, .85fr); align-items: start; margin-bottom: 16px; }
+    .card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+    .card-heading h2 { margin: 0; font-size: 14px; letter-spacing: -.2px; }
+    .card-heading p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+    .period-control { display: flex; gap: 2px; padding: 3px; background: #f4f6f3; border-radius: 8px; }
+    .period-control button { padding: 6px 8px; color: #758078; background: transparent; border: 0; border-radius: 6px; font-size: 9px; }
+    .period-control button[aria-pressed="true"] { color: var(--green-dark); background: white; box-shadow: 0 1px 3px #152b1d12; font-weight: 700; }
+    .chart-summary { display: flex; align-items: baseline; gap: 8px; margin: 1px 0 4px; }
+    .chart-summary strong { font-size: 21px; letter-spacing: -.5px; }
+    .chart-summary span { color: var(--green); font-size: 10px; font-weight: 700; }
+    .chart-svg { display: block; width: 100%; height: auto; min-height: 155px; overflow: visible; }
+    .chart-gridline { stroke: #edf0ed; stroke-width: 1; }
+    .chart-axis { fill: #909b94; font-size: 9px; }
+    .chart-line-main { fill: none; stroke: #287c56; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-line-compare { fill: none; stroke: #a7b3ac; stroke-width: 2; stroke-dasharray: 4 5; stroke-linecap: round; }
+    .chart-area { fill: url(#chartFill); }
+    .chart-key { display: flex; align-items: center; gap: 15px; margin-top: 6px; color: #7a867e; font-size: 9px; }
+    .chart-key span { display: flex; align-items: center; gap: 5px; }
+    .chart-key i { display: inline-block; width: 14px; border-top: 2px solid var(--green); }
+    .chart-key .dash { border-color: #a7b3ac; border-top-style: dashed; }
+    .compare-label { display: flex; align-items: center; gap: 6px; color: #78837b; font-size: 9px; white-space: nowrap; }
+
+    .alert-card { padding: 0; overflow: hidden; }
+    .alert-card .card-heading { margin: 0; padding: 18px 18px 12px; }
+    .alert-count { min-width: 20px; padding: 3px 6px; color: #966019; background: var(--amber-pale); border-radius: 20px; text-align: center; font-size: 9px; font-weight: 700; }
+    .alert-list { list-style: none; margin: 0; padding: 0 18px; }
+    .alert-item { display: grid; grid-template-columns: 8px 1fr auto; gap: 10px; align-items: start; padding: 13px 0; border-top: 1px solid #f0f2f0; }
+    .alert-dot { width: 7px; height: 7px; margin-top: 4px; background: #de9b36; border-radius: 50%; }
+    .alert-dot.critical { background: var(--red); }
+    .alert-copy strong { display: block; font-size: 10px; line-height: 1.4; }
+    .alert-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .alert-actions { display: flex; gap: 7px; align-items: center; }
+    .mini-button { padding: 4px 7px; color: #69756d; background: white; border: 1px solid var(--line); border-radius: 6px; font-size: 9px; }
+    .mini-button:hover { color: var(--green); border-color: #a4cbb3; }
+    .empty-state { padding: 15px 0; color: var(--muted); font-size: 10px; }
+    .all-alerts { display: block; width: 100%; padding: 11px; color: var(--green); background: #fbfcfb; border: 0; border-top: 1px solid var(--line); font-size: 10px; font-weight: 700; text-align: center; }
+
+    .solar-card { margin-bottom: 16px; }
+    .solar-live { display: flex; align-items: center; gap: 6px; padding: 5px 8px; color: var(--green-dark); background: var(--green-pale); border-radius: 20px; font-size: 9px; font-weight: 700; }
+    .solar-live i { width: 6px; height: 6px; background: #5eaa77; border-radius: 50%; }
+    .solar-flow { display: grid; grid-template-columns: 1fr 36px 1fr 36px 1fr; align-items: center; gap: 7px; }
+    .flow-node { min-height: 89px; padding: 12px; background: #f8faf8; border: 1px solid #eef1ee; border-radius: 10px; }
+    .flow-node.highlight { background: #f0f8e6; border-color: #e5efd5; }
+    .flow-node span { display: block; color: var(--muted); font-size: 9px; }
+    .flow-node strong { display: block; margin: 8px 0 3px; font-size: 17px; letter-spacing: -.4px; }
+    .flow-node small { color: #89948d; font-size: 9px; }
+    .flow-arrow { color: #aab4ad; text-align: center; font-size: 16px; }
+    .solar-foot { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 13px; padding-top: 12px; border-top: 1px solid #eff1ef; }
+    .solar-foot span { color: #738078; font-size: 9px; }
+    .solar-foot strong { color: var(--ink); }
+
+    .lower-grid { grid-template-columns: 1.1fr .9fr; align-items: start; margin-bottom: 16px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 0 9px 9px; color: #8b968f; border-bottom: 1px solid #eef1ee; font-size: 9px; font-weight: 650; }
+    td { padding: 11px 9px; border-bottom: 1px solid #f1f3f1; font-size: 10px; }
+    tr:last-child td { border-bottom: 0; }
+    .equipment-name { font-weight: 650; }
+    .equipment-name small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 400; }
+    .badge { display: inline-block; padding: 4px 7px; color: var(--green-dark); background: var(--green-pale); border-radius: 20px; font-size: 9px; white-space: nowrap; }
+    .badge.estimated { color: #80621f; background: #fff6df; }
+    .add-button { padding: 7px 10px; color: var(--green); background: white; border: 1px solid #d6e5d9; border-radius: 7px; font-size: 9px; font-weight: 700; }
+    .routine-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+    .routine-list li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 9px; padding: 11px 0; border-bottom: 1px solid #f0f2f0; }
+    .routine-list li:last-child { border-bottom: 0; }
+    .routine-icon { display: grid; width: 27px; height: 27px; place-items: center; background: #f2f6f1; border-radius: 8px; }
+    .routine-copy strong { display: block; font-size: 10px; }
+    .routine-copy small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .routine-time { color: #657269; font-size: 9px; white-space: nowrap; }
+    .schedule-note { margin: 12px 0 0; padding: 9px; color: #748078; background: #f8faf8; border-radius: 7px; font-size: 9px; line-height: 1.5; }
+    .schedule-note strong { color: var(--green-dark); }
+
+    .bottom-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .field { display: grid; gap: 5px; }
+    .field label { color: #68756d; font-size: 9px; font-weight: 650; }
+    .field input, .field select { width: 100%; min-width: 0; padding: 8px 9px; color: var(--ink); background: white; border: 1px solid #e4e9e4; border-radius: 7px; font-size: 10px; }
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    .primary-button { padding: 8px 12px; color: white; background: var(--green); border: 0; border-radius: 7px; font-size: 10px; font-weight: 700; }
+    .primary-button:hover { background: var(--green-dark); }
+    .form-hint { color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .event-list { display: grid; gap: 9px; margin-top: 13px; }
+    .event-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 10px; background: #f8faf8; border-radius: 8px; font-size: 9px; }
+    .event-row span { color: var(--muted); }
+    .tariff-note { margin-top: 12px; padding: 9px 10px; color: #80621f; background: #fff9e9; border-radius: 7px; font-size: 9px; line-height: 1.5; }
+    .monthly-summary { margin-top: 16px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .summary-stat { padding: 12px; background: #f8faf8; border-radius: 9px; }
+    .summary-stat span { display: block; color: var(--muted); font-size: 9px; }
+    .summary-stat strong { display: block; margin-top: 6px; font-size: 15px; }
+    .summary-foot { margin: 11px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .footer-note { margin-top: 18px; color: #909b94; font-size: 9px; line-height: 1.6; text-align: center; }
+    .toast { position: fixed; right: 22px; bottom: 20px; z-index: 30; max-width: min(360px, calc(100vw - 32px)); padding: 12px 16px; color: white; background: #203d2d; border-radius: 9px; box-shadow: 0 8px 25px #14281d30; font-size: 12px; }
+    .toast[hidden] { display: none; }
+    dialog { width: min(420px, calc(100vw - 30px)); padding: 0; border: 1px solid var(--line); border-radius: 13px; box-shadow: 0 15px 60px #10231d30; }
+    dialog::backdrop { background: #12231d66; }
+    .dialog-inner { padding: 20px; }
+    .dialog-inner h2 { margin: 0 0 7px; font-size: 16px; }
+    .dialog-inner > p { margin: 0 0 16px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
+    .secondary-button { padding: 8px 12px; color: #69756d; background: white; border: 1px solid var(--line); border-radius: 7px; font-size: 10px; }
+
+    @media (max-width: 1100px) {
+      .sidebar { width: 205px; }
+      .main { margin-left: 205px; padding-right: 24px; padding-left: 24px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .main-grid { grid-template-columns: minmax(0, 1.35fr) minmax(245px, .9fr); }
+    }
+    @media (max-width: 820px) {
+      .sidebar { position: static; width: 100%; height: auto; padding: 11px 16px 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .brand { padding: 0 3px 10px; }
+      .sidebar .nav-label, .sidebar-bottom { display: none; }
+      .nav { grid-auto-flow: column; grid-auto-columns: max-content; gap: 4px; overflow-x: auto; padding-bottom: 3px; }
+      .nav a { padding: 8px 10px; font-size: 10px; white-space: nowrap; }
+      .nav-icon { font-size: 13px; }
+      .main { margin-left: 0; padding: 20px 20px 40px; }
+      .main-grid { grid-template-columns: 1fr; }
+      .lower-grid, .bottom-grid { grid-template-columns: 1fr; }
+      .topbar { margin-bottom: 23px; }
+      .crumb { display: none; }
+    }
+    @media (max-width: 520px) {
+      .main { padding: 17px 13px 34px; }
+      .topbar { gap: 8px; margin-bottom: 20px; }
+      .top-actions { gap: 7px; }
+      .select-wrap { gap: 4px; padding: 7px; }
+      .select-wrap span { display: none; }
+      .select-wrap select { max-width: 140px; font-size: 10px; }
+      .icon-button { width: 34px; height: 34px; }
+      .page-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .date-label { font-size: 10px; }
+      .demo-banner { align-items: flex-start; }
+      .demo-banner span:last-child { display: none; }
+      .status-strip { flex-wrap: wrap; }
+      .status-strip .status-meta { width: 100%; margin-left: 18px; }
+      .metrics { gap: 9px; }
+      .metric-card { min-height: 124px; padding: 13px; }
+      .metric-value { font-size: 22px; }
+      .card { padding: 15px; }
+      .card-heading { gap: 8px; }
+      .period-control button { padding: 6px; }
+      .chart-svg { min-height: 130px; }
+      .solar-flow { grid-template-columns: 1fr 18px 1fr; gap: 5px; }
+      .solar-flow .flow-node:last-of-type { grid-column: 3; }
+      .solar-flow .flow-arrow:nth-of-type(4) { display: none; }
+      .flow-node { min-height: 78px; padding: 9px; }
+      .flow-node strong { font-size: 15px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      th, td { padding-right: 6px; padding-left: 6px; }
+      .alert-actions { flex-direction: column; align-items: flex-end; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <div class="layout">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <a class="brand" href="#inicio" aria-label="Energia Clara, início">
+        <span class="brand-mark" aria-hidden="true">ϟ</span>
+        <span class="brand-name">energia<span>clara</span></span>
+      </a>
+      <div class="nav-label">Acompanhe seu negócio</div>
+      <nav class="nav">
+        <a href="#inicio" aria-current="page"><span class="nav-icon" aria-hidden="true">▦</span>Visão geral</a>
+        <a href="#historico"><span class="nav-icon" aria-hidden="true">◷</span>Consumo</a>
+        <a href="#solar"><span class="nav-icon" aria-hidden="true">☼</span>Energia solar</a>
+        <a href="#alertas"><span class="nav-icon" aria-hidden="true">♧</span>Alertas <span class="alert-count" id="nav-alert-count">2</span></a>
+        <a href="#equipamentos"><span class="nav-icon" aria-hidden="true">⌁</span>Equipamentos</a>
+        <a href="#configuracoes"><span class="nav-icon" aria-hidden="true">⚙</span>Configurações</a>
+        <a href="#relatorio"><span class="nav-icon" aria-hidden="true">▤</span>Relatório mensal</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="help-card">
+          <strong>Energia sem mistério</strong>
+          <p>kW indica a potência agora. kWh soma a energia usada ao longo do tempo.</p>
+          <button class="text-button" type="button" id="help-button">Ver dicas rápidas →</button>
+        </div>
+        <div class="profile">
+          <div class="avatar" aria-hidden="true">JF</div>
+          <div class="profile-copy"><strong>Juliana Ferreira</strong><span>Salão · Campinas, SP</span></div>
+          <label class="sr-only" for="role-select">Perfil de demonstração</label>
+          <select class="role-select" id="role-select" title="Perfil de demonstração">
+            <option>Proprietário</option><option>Gerente</option><option>Operador</option>
+          </select>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="conteudo">
+      <header class="topbar" id="inicio">
+        <div class="crumb">Meu negócio <span aria-hidden="true">/</span> Visão geral</div>
+        <div class="mobile-brand"><strong>energia<span>clara</span></strong></div>
+        <div class="top-actions">
+          <label class="select-wrap"><span>Unidade</span>
+            <select id="unit-select" aria-label="Unidade consumidora">
+              <option>Salão Juliana · Campinas</option>
+              <option>+ Cadastrar outra unidade</option>
+            </select>
+          </label>
+          <button class="icon-button" id="notification-button" type="button" aria-label="Notificações ativas">♧<span class="notification-dot" aria-hidden="true"></span></button>
+        </div>
+      </header>
+
+      <section class="page-heading" aria-labelledby="page-title">
+        <div>
+          <div class="eyebrow">Quarta-feira, 18 de junho</div>
+          <h1 id="page-title">Bom dia, Juliana <span aria-hidden="true">☀</span></h1>
+          <p class="subtitle">Aqui está um resumo do uso de energia do seu salão.</p>
+        </div>
+        <div class="date-label" id="local-date">◷ &nbsp;Dados de demonstração</div>
+      </section>
+
+      <div class="demo-banner" role="note">
+        <span aria-hidden="true">ⓘ</span>
+        <span><strong>Protótipo com dados demonstrativos.</strong> Nenhum medidor ou distribuidora está conectado; valores, alertas e geração solar são exemplos para apresentar a experiência.</span>
+        <span>As configurações salvas ficam apenas neste navegador.</span>
+      </div>
+      <div class="status-strip" role="status">
+        <span class="status-indicator" aria-hidden="true"></span>
+        <span><strong>Sem conexão com medidor</strong> · Última leitura de exemplo: hoje, 10:45</span>
+        <span class="status-meta">Atualização prevista: a cada 15 min · Dados podem estar desatualizados</span>
+      </div>
+
+      <section class="grid metrics" aria-label="Resumo de energia">
+        <article class="card metric-card">
+          <div class="metric-top"><span>Consumo agora <span title="Potência instantânea estimada em quilowatts">ⓘ</span></span><span class="metric-symbol" aria-hidden="true">ϟ</span></div>
+          <div class="metric-value" id="instant-value">3,8 <small>kW</small></div>
+          <div class="metric-detail">Potência instantânea · última leitura às 10:45</div>
+        </article>
+        <article class="card metric-card">
+          <div class="metric-top"><span>Consumo hoje <span title="Energia acumulada em quilowatt-hora">ⓘ</span></span><span class="metric-symbol" aria-hidden="true">↗</span></div>
+          <div class="metric-value">24,6 <small>kWh</small></div>
+          <div class="metric-detail"><span class="positive">↓ 8%</span> em relação a ontem neste horário</div>
+        </article>
+        <article class="card metric-card">
+          <div class="metric-top"><span>Custo estimado no mês</span><span class="metric-symbol" aria-hidden="true">R$</span></div>
+          <div class="metric-value" id="cost-value">R$ 486</div>
+          <div class="metric-detail">Referência calculada com tarifa cadastrada · fatura pode variar</div>
+        </article>
+        <article class="card metric-card">
+          <div class="metric-top"><span>Energia do dia</span><span class="metric-symbol" aria-hidden="true">☼</span></div>
+          <div class="metric-value">68<small>%</small></div>
+          <div class="metric-detail">Do consumo atendido diretamente pelo sol</div>
+          <div class="solar-mix" aria-label="68% solar, 32% rede"><span></span><span></span></div>
+          <div class="legend"><span><i style="background:#80bf92"></i>Solar</span><span><i style="background:#c4d4cb"></i>Distribuidora</span></div>
+        </article>
+      </section>
+
+      <div class="grid main-grid">
+        <section class="card" id="historico" aria-labelledby="history-title">
+          <div class="card-heading">
+            <div><h2 id="history-title">Histórico de consumo</h2><p>Entenda quando a energia é mais usada</p></div>
+            <div class="period-control" role="group" aria-label="Período do gráfico">
+              <button type="button" data-period="day" aria-pressed="true">Dia</button>
+              <button type="button" data-period="week" aria-pressed="false">Semana</button>
+              <button type="button" data-period="month" aria-pressed="false">Mês</button>
+            </div>
+          </div>
+          <div class="chart-summary"><strong id="chart-total">24,6 kWh</strong><span id="chart-change">↓ 8% vs. ontem</span></div>
+          <label class="compare-label"><input type="checkbox" id="compare-toggle" checked> Comparar com período anterior</label>
+          <svg class="chart-svg" viewBox="0 0 640 230" role="img" aria-labelledby="chart-title chart-desc">
+            <title id="chart-title">Consumo ao longo do dia</title>
+            <desc id="chart-desc">Gráfico demonstrativo do consumo por horário, comparado ao dia anterior.</desc>
+            <defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6eb28a" stop-opacity=".22"/><stop offset="1" stop-color="#6eb28a" stop-opacity="0"/></linearGradient></defs>
+            <line class="chart-gridline" x1="42" y1="25" x2="625" y2="25"/>
+            <line class="chart-gridline" x1="42" y1="68" x2="625" y2="68"/>
+            <line class="chart-gridline" x1="42" y1="111" x2="625" y2="111"/>
+            <line class="chart-gridline" x1="42" y1="154" x2="625" y2="154"/>
+            <line class="chart-gridline" x1="42" y1="197" x2="625" y2="197"/>
+            <text class="chart-axis" x="7" y="29">8 kWh</text><text class="chart-axis" x="7" y="72">6 kWh</text><text class="chart-axis" x="7" y="115">4 kWh</text><text class="chart-axis" x="7" y="158">2 kWh</text><text class="chart-axis" x="14" y="201">0</text>
+            <path class="chart-area" d="M42 169 C73 163 78 152 108 155 S149 143 174 145 S206 126 237 130 S271 112 300 119 S332 97 363 107 S396 83 425 91 S459 66 488 82 S520 57 550 73 S589 39 625 51 L625 197 L42 197 Z"/>
+            <path class="chart-line-compare" id="compare-line" d="M42 176 C70 166 81 160 108 163 S147 153 174 158 S207 139 237 146 S270 130 300 137 S332 114 363 122 S397 103 425 112 S459 90 488 102 S521 75 550 91 S592 62 625 70"/>
+            <path class="chart-line-main" id="main-line" d="M42 169 C73 163 78 152 108 155 S149 143 174 145 S206 126 237 130 S271 112 300 119 S332 97 363 107 S396 83 425 91 S459 66 488 82 S520 57 550 73 S589 39 625 51"/>
+            <text class="chart-axis" x="39" y="219">06h</text><text class="chart-axis" x="180" y="219">10h</text><text class="chart-axis" x="326" y="219">14h</text><text class="chart-axis" x="470" y="219">18h</text><text class="chart-axis" x="605" y="219">22h</text>
+          </svg>
+          <div class="chart-key"><span><i></i>Este período</span><span id="compare-key"><i class="dash"></i>Período anterior</span><span>Valores demonstrativos</span></div>
+        </section>
+
+        <section class="card alert-card" id="alertas" aria-labelledby="alerts-title">
+          <div class="card-heading">
+            <div><h2 id="alerts-title">Precisa da sua atenção</h2><p>Alertas explicados de forma simples</p></div>
+            <span class="alert-count" id="active-alert-count">2 ativos</span>
+          </div>
+          <ul class="alert-list" id="alert-list">
+            <li class="alert-item" data-alert-id="outside">
+              <span class="alert-dot"></span>
+              <div class="alert-copy"><strong>Consumo após o expediente</strong><span>0,8 kW às 22:30, acima do limite de 0,5 kW. Confira se algum aparelho ficou ligado.</span></div>
+              <div class="alert-actions"><button class="mini-button" type="button" data-alert-action="ack">Reconhecer</button><button class="mini-button" type="button" data-alert-action="close">Encerrar</button></div>
+            </li>
+            <li class="alert-item" data-alert-id="pattern">
+              <span class="alert-dot critical"></span>
+              <div class="alert-copy"><strong>Pico acima do seu padrão</strong><span>Às 15h, consumo 35% acima da média das quartas-feiras. Ar-condicionado e secadores ligados juntos?</span></div>
+              <div class="alert-actions"><button class="mini-button" type="button" data-alert-action="ack">Reconhecer</button><button class="mini-button" type="button" data-alert-action="close">Encerrar</button></div>
+            </li>
+          </ul>
+          <button class="all-alerts" type="button" id="view-alerts">Ver histórico de alertas</button>
+        </section>
+      </div>
+
+      <section class="card solar-card" id="solar" aria-labelledby="solar-title">
+        <div class="card-heading">
+          <div><h2 id="solar-title">De onde vem sua energia</h2><p>Veja como geração e consumo se relacionam</p></div>
+          <span class="solar-live"><i aria-hidden="true"></i>Visão do dia · exemplo</span>
+        </div>
+        <div class="solar-flow" aria-label="Fluxo de energia demonstrativo">
+          <div class="flow-node"><span>☼ &nbsp; Geração solar</span><strong>18,4 kWh</strong><small>Gerados hoje</small></div>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <div class="flow-node highlight"><span>⌂ &nbsp; Uso direto no salão</span><strong>16,7 kWh</strong><small>Autoconsumo solar</small></div>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <div class="flow-node"><span>↕ &nbsp; Rede da distribuidora</span><strong>7,9 kWh</strong><small>Importados hoje</small></div>
+        </div>
+        <div class="solar-foot">
+          <span>Excedente enviado à rede: <strong>1,7 kWh</strong></span>
+          <span>Autoconsumo: <strong>91% da geração</strong></span>
+          <span>Integração: <strong>não conectada · valores fictícios</strong></span>
+        </div>
+      </section>
+
+      <div class="grid lower-grid">
+        <section class="card" id="equipamentos" aria-labelledby="equipment-title">
+          <div class="card-heading">
+            <div><h2 id="equipment-title">Equipamentos do salão</h2><p>Consumo por equipamento é uma estimativa, não uma medição individual</p></div>
+            <button type="button" class="add-button" id="add-equipment">+ Adicionar</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Equipamento</th><th>Potência</th><th>Uso habitual</th><th>Tipo de dado</th></tr></thead>
+              <tbody id="equipment-rows">
+                <tr><td class="equipment-name">Secadores <small>Beleza · 3 unidades</small></td><td>1,8 kW</td><td>09h–19h</td><td><span class="badge estimated">Estimado</span></td></tr>
+                <tr><td class="equipment-name">Ar-condicionado <small>Climatização · 1 unidade</small></td><td>1,2 kW</td><td>10h–18h</td><td><span class="badge estimated">Estimado</span></td></tr>
+                <tr><td class="equipment-name">Aquecedor de água <small>Água · 1 unidade</small></td><td>2,0 kW</td><td>08h–11h</td><td><span class="badge estimated">Estimado</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="schedule-note">Sem submedição, a associação por equipamento é apenas aproximada. Leituras individuais precisam de medidores compatíveis.</p>
+        </section>
+
+        <section class="card" aria-labelledby="recommendations-title">
+          <div class="card-heading">
+            <div><h2 id="recommendations-title">Melhores horários para usar</h2><p>Sugestões usando histórico e geração solar de exemplo</p></div>
+          </div>
+          <ul class="routine-list">
+            <li><span class="routine-icon" aria-hidden="true">♨</span><span class="routine-copy"><strong>Aquecedor de água</strong><small>Prefira concentrar o uso pela manhã</small></span><span class="routine-time">09h–11h</span></li>
+            <li><span class="routine-icon" aria-hidden="true">☼</span><span class="routine-copy"><strong>Procedimentos com aparelhos</strong><small>Maior geração solar prevista</small></span><span class="routine-time">11h–15h</span></li>
+            <li><span class="routine-icon" aria-hidden="true">❄</span><span class="routine-copy"><strong>Ar-condicionado</strong><small>Evite deixar ligado após fechar</small></span><span class="routine-time">Até 19h</span></li>
+          </ul>
+          <p class="schedule-note">Sugestão baseada em dados fictícios; a disponibilidade solar pode mudar com o clima. Não altera sua agenda automaticamente.</p>
+        </section>
+      </div>
+
+      <div class="grid bottom-grid" id="configuracoes">
+        <section class="card" aria-labelledby="schedule-title">
+          <div class="card-heading">
+            <div><h2 id="schedule-title">Horário de funcionamento</h2><p>Use seus horários para entender o consumo fora do expediente</p></div>
+          </div>
+          <form id="schedule-form">
+            <div class="form-grid">
+              <div class="field"><label for="open-time">Abre</label><input id="open-time" name="open" type="time" value="09:00"></div>
+              <div class="field"><label for="close-time">Fecha</label><input id="close-time" name="close" type="time" value="19:00"></div>
+              <div class="field"><label for="off-limit">Limite fora do expediente (kW)</label><input id="off-limit" name="limit" type="number" min="0" step="0.1" value="0.5"></div>
+              <div class="field"><label for="tariff">Tarifa estimada (R$/kWh)</label><input id="tariff" name="tariff" type="number" min="0" step="0.01" value="0.82"></div>
+              <div class="field"><label for="cost-limit">Limite de custo mensal (R$)</label><input id="cost-limit" name="costLimit" type="number" min="0" step="10" value="600"></div>
+              <div class="field"><label for="special-date">Feriado ou horário especial</label><input id="special-date" name="specialDate" type="date"></div>
+            </div>
+            <div class="form-actions"><button class="primary-button" type="submit">Salvar configuração</button><span class="form-hint">Dias da semana: seg–sáb · Domingo: fechado<br>Esta demonstração guarda os ajustes neste navegador.</span></div>
+          </form>
+        </section>
+
+        <section class="card" aria-labelledby="event-title">
+          <div class="card-heading">
+            <div><h2 id="event-title">O que aconteceu no negócio?</h2><p>Registre fatos que ajudam a explicar mudanças no consumo</p></div>
+          </div>
+          <form id="event-form">
+            <div class="form-grid">
+              <div class="field"><label for="event-type">Tipo de ocorrência</label><select id="event-type"><option>Manutenção</option><option>Equipamento com defeito</option><option>Atendimento excepcional</option><option>Feriado</option><option>Mudança de horário</option></select></div>
+              <div class="field"><label for="event-date">Data</label><input id="event-date" type="date" required></div>
+              <div class="field" style="grid-column:1/-1"><label for="event-description">Descrição</label><input id="event-description" type="text" maxlength="100" placeholder="Ex.: manutenção do ar-condicionado" required></div>
+            </div>
+            <div class="form-actions"><button class="primary-button" type="submit">Registrar ocorrência</button><span class="form-hint">O registro fica neste navegador.</span></div>
+          </form>
+          <div class="event-list" id="event-list" aria-live="polite">
+            <div class="event-row"><strong>Troca de filtro do ar-condicionado</strong><span>12 jun · Manutenção</span></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card monthly-summary" id="relatorio" aria-labelledby="report-title">
+        <div class="card-heading">
+          <div><h2 id="report-title">Resumo do mês · Junho</h2><p>Prévia demonstrativa do relatório mensal</p></div>
+          <button class="add-button" type="button" id="report-button">Baixar resumo</button>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-stat"><span>Consumo total</span><strong>412 kWh</strong></div>
+          <div class="summary-stat"><span>Custo estimado</span><strong id="report-cost">R$ 486</strong></div>
+          <div class="summary-stat"><span>Pico de consumo</span><strong>5,6 kW · 15h</strong></div>
+          <div class="summary-stat"><span>Fora do expediente</span><strong>18 kWh</strong></div>
+        </div>
+        <p class="summary-foot">Inclui alertas: 2 · participação solar no consumo: 68% · valores de referência, não substituem a fatura oficial. Tarifas podem incluir energia, postos, bandeiras, tributos, encargos e créditos de geração; este protótipo aplica somente uma tarifa simplificada definida por você.</p>
+      </section>
+      <p class="footer-note">Dados demonstrativos para avaliação do protótipo. Nenhum dado pessoal é enviado a um servidor. Esta interface não implementa autenticação, autorização, integrações reais, cobrança ou tratamento de dados para produção.</p>
+    </main>
+  </div>
+
+  <dialog id="equipment-dialog" aria-labelledby="equipment-dialog-title">
+    <form class="dialog-inner" id="equipment-form" method="dialog">
+      <h2 id="equipment-dialog-title">Adicionar equipamento</h2>
+      <p>O consumo exibido será uma estimativa, salvo se houver medição individual integrada.</p>
+      <div class="form-grid">
+        <div class="field"><label for="equipment-name">Nome</label><input id="equipment-name" maxlength="35" required placeholder="Ex.: Secador 4"></div>
+        <div class="field"><label for="equipment-category">Categoria</label><select id="equipment-category"><option>Beleza</option><option>Climatização</option><option>Água</option><option>Refrigeração</option><option>Outro</option></select></div>
+        <div class="field"><label for="equipment-power">Potência estimada (kW)</label><input id="equipment-power" type="number" min="0.01" max="100" step="0.01" required></div>
+        <div class="field"><label for="equipment-quantity">Quantidade</label><input id="equipment-quantity" type="number" min="1" max="100" step="1" value="1" required></div>
+        <div class="field"><label for="equipment-start">Início habitual</label><input id="equipment-start" type="time" value="09:00"></div>
+        <div class="field"><label for="equipment-end">Fim habitual</label><input id="equipment-end" type="time" value="19:00"></div>
+      </div>
+      <div class="dialog-actions"><button class="secondary-button" type="button" id="cancel-equipment">Cancelar</button><button class="primary-button" type="submit">Adicionar</button></div>
+    </form>
+  </dialog>
+  <dialog id="alert-dialog" aria-labelledby="alert-dialog-title">
+    <form class="dialog-inner" id="alert-form" method="dialog">
+      <h2 id="alert-dialog-title">Encerrar alerta</h2>
+      <p>Registre o que encontrou e qual ação foi tomada.</p>
+      <div class="form-grid">
+        <div class="field"><label for="alert-cause">Causa identificada</label><select id="alert-cause"><option>Equipamento esquecido ligado</option><option>Uso fora do padrão esperado</option><option>Equipamento com defeito</option><option>Falso alerta</option><option>Outra causa</option></select></div>
+        <div class="field"><label for="alert-action">Ação tomada</label><input id="alert-action" maxlength="100" required placeholder="Ex.: desliguei o ar-condicionado"></div>
+      </div>
+      <div class="dialog-actions"><button class="secondary-button" type="button" id="cancel-alert">Cancelar</button><button class="primary-button" type="submit">Registrar e encerrar</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script>
+    (() => {
+      "use strict";
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const toast = $("#toast");
+      let toastTimer;
+      let pendingAlert = null;
+      const showToast = (message) => {
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
+      };
+
+      const periodData = {
+        day: { total: "24,6 kWh", change: "↓ 8% vs. ontem", description: "Gráfico demonstrativo do consumo por horário, comparado ao dia anterior.", main: "M42 169 C73 163 78 152 108 155 S149 143 174 145 S206 126 237 130 S271 112 300 119 S332 97 363 107 S396 83 425 91 S459 66 488 82 S520 57 550 73 S589 39 625 51", compare: "M42 176 C70 166 81 160 108 163 S147 153 174 158 S207 139 237 146 S270 130 300 137 S332 114 363 122 S397 103 425 112 S459 90 488 102 S521 75 550 91 S592 62 625 70" },
+        week: { total: "162 kWh", change: "↓ 5% vs. semana anterior", description: "Gráfico demonstrativo de consumo diário nesta semana, comparado à semana anterior.", main: "M42 138 C78 104 99 118 132 94 S185 111 218 88 S268 119 300 76 S352 99 382 70 S433 84 462 57 S516 91 545 52 S595 64 625 37", compare: "M42 151 C79 126 99 135 132 113 S184 134 218 108 S267 138 300 96 S349 117 382 88 S430 103 462 76 S514 110 545 72 S595 83 625 57" },
+        month: { total: "412 kWh", change: "↓ 3% vs. mês anterior", description: "Gráfico demonstrativo de consumo diário neste mês, comparado ao mês anterior.", main: "M42 121 C75 109 91 142 122 119 S170 99 197 116 S242 76 270 94 S312 109 340 78 S381 68 410 98 S449 83 477 61 S516 100 545 74 S590 47 625 59", compare: "M42 140 C75 129 94 156 122 137 S168 114 197 132 S242 97 270 112 S313 129 340 98 S382 91 410 117 S449 107 477 82 S515 118 545 94 S590 68 625 78" }
+      };
+
+      try {
+        const savedSchedule = localStorage.getItem("energia-clara-schedule");
+        if (savedSchedule) {
+          const values = JSON.parse(savedSchedule);
+          Object.entries(values).forEach(([name, value]) => {
+            const field = $(`#schedule-form [name="${name}"]`);
+            if (field && typeof value === "string") field.value = value;
+          });
+        }
+      } catch {
+        showToast("As configurações salvas não puderam ser lidas.");
+      }
+
+      $$(".period-control button").forEach((button) => {
+        button.addEventListener("click", () => {
+          $$(".period-control button").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+          const data = periodData[button.dataset.period];
+          $("#chart-total").textContent = data.total;
+          $("#chart-change").textContent = data.change;
+          $("#chart-desc").textContent = data.description;
+          $("#main-line").setAttribute("d", data.main);
+          $("#compare-line").setAttribute("d", data.compare);
+        });
+      });
+      $("#compare-toggle").addEventListener("change", (event) => {
+        $("#compare-line").hidden = !event.target.checked;
+        $("#compare-key").hidden = !event.target.checked;
+        $("#chart-desc").textContent = event.target.checked
+          ? periodData[$(".period-control button[aria-pressed=true]").dataset.period].description
+          : "Gráfico demonstrativo apenas do período selecionado, sem comparação.";
+      });
+
+      $("#schedule-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const values = Object.fromEntries(formData.entries());
+        try {
+          localStorage.setItem("energia-clara-schedule", JSON.stringify(values));
+          const rate = Number(values.tariff);
+          $("#cost-value").textContent = `R$ ${Math.round(412 * rate).toLocaleString("pt-BR")}`;
+          $("#report-cost").textContent = $("#cost-value").textContent;
+          $("[data-alert-id='outside'] .alert-copy span").textContent =
+            `Consumo de exemplo às 22:30 acima do limite configurado de ${Number(values.limit).toLocaleString("pt-BR")} kW. Confira se algum aparelho ficou ligado.`;
+          showToast("Configuração salva neste navegador.");
+        } catch {
+          showToast("Não foi possível salvar neste navegador.");
+        }
+      });
+
+      $("#event-date").value = new Date().toISOString().slice(0, 10);
+      $("#event-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const description = $("#event-description").value.trim();
+        if (!description) return;
+        const date = new Date(`${$("#event-date").value}T12:00:00`);
+        const formattedDate = Number.isNaN(date.getTime()) ? "Data não informada" :
+          date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
+        const row = document.createElement("div");
+        row.className = "event-row";
+        const title = document.createElement("strong");
+        title.textContent = description;
+        const detail = document.createElement("span");
+        detail.textContent = `${formattedDate} · ${$("#event-type").value}`;
+        row.append(title, detail);
+        $("#event-list").prepend(row);
+        event.currentTarget.reset();
+        $("#event-date").value = new Date().toISOString().slice(0, 10);
+        showToast("Ocorrência registrada nesta demonstração.");
+      });
+
+      const equipmentDialog = $("#equipment-dialog");
+      $("#add-equipment").addEventListener("click", () => equipmentDialog.showModal());
+      $("#cancel-equipment").addEventListener("click", () => equipmentDialog.close());
+      $("#equipment-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const name = $("#equipment-name").value.trim();
+        const category = $("#equipment-category").value;
+        const power = Number($("#equipment-power").value);
+        const quantity = Number($("#equipment-quantity").value);
+        if (!name || !Number.isFinite(power) || power <= 0 || !Number.isInteger(quantity) || quantity < 1) return;
+        const row = document.createElement("tr");
+        const itemCell = document.createElement("td");
+        itemCell.className = "equipment-name";
+        const itemName = document.createElement("span");
+        itemName.textContent = name;
+        const details = document.createElement("small");
+        details.textContent = `${category} · ${quantity} ${quantity === 1 ? "unidade" : "unidades"}`;
+        itemCell.append(itemName, details);
+        const powerCell = document.createElement("td");
+        powerCell.textContent = `${(power * quantity).toLocaleString("pt-BR")} kW`;
+        const hoursCell = document.createElement("td");
+        hoursCell.textContent = `${$("#equipment-start").value}–${$("#equipment-end").value}`;
+        const typeCell = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "badge estimated";
+        badge.textContent = "Estimado";
+        typeCell.append(badge);
+        row.append(itemCell, powerCell, hoursCell, typeCell);
+        $("#equipment-rows").append(row);
+        event.currentTarget.reset();
+        $("#equipment-quantity").value = "1";
+        equipmentDialog.close();
+        showToast("Equipamento adicionado como estimativa.");
+      });
+
+      const alertDialog = $("#alert-dialog");
+      $$("#alert-list [data-alert-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const item = button.closest(".alert-item");
+          if (button.dataset.alertAction === "ack") {
+            item.dataset.acknowledged = "true";
+            item.querySelector(".alert-copy span").textContent += " · Reconhecido";
+            button.disabled = true;
+            button.textContent = "Reconhecido";
+            showToast("Alerta reconhecido.");
+            return;
+          }
+          pendingAlert = item;
+          alertDialog.showModal();
+        });
+      });
+      $("#cancel-alert").addEventListener("click", () => { alertDialog.close(); pendingAlert = null; });
+      $("#alert-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!pendingAlert) return;
+        const cause = $("#alert-cause").value;
+        const action = $("#alert-action").value.trim();
+        if (!action) return;
+        pendingAlert.querySelector(".alert-copy span").textContent += ` · Encerrado: ${cause}; ação: ${action}`;
+        pendingAlert.remove();
+        pendingAlert = null;
+        $("#alert-form").reset();
+        alertDialog.close();
+        updateAlertCount();
+        showToast("Causa e ação registradas; alerta encerrado.");
+      });
+      function updateAlertCount() {
+        const count = $$("#alert-list .alert-item").length;
+        $("#active-alert-count").textContent = `${count} ${count === 1 ? "ativo" : "ativos"}`;
+        $("#nav-alert-count").textContent = count;
+        $("#nav-alert-count").hidden = count === 0;
+        if (!count) {
+          const empty = document.createElement("li");
+          empty.className = "empty-state";
+          empty.textContent = "Tudo em dia. Nenhum alerta ativo.";
+          $("#alert-list").append(empty);
+        }
+      }
+
+      $("#unit-select").addEventListener("change", (event) => {
+        if (event.target.selectedIndex === 1) {
+          event.target.selectedIndex = 0;
+          showToast("Cadastro de unidades não está disponível nesta demonstração.");
+        }
+      });
+      $("#role-select").addEventListener("change", () => {
+        showToast("Perfil alterado apenas para demonstração; permissões reais não são aplicadas.");
+      });
+      $("#notification-button").addEventListener("click", () => {
+        $("#alertas").scrollIntoView({ behavior: "smooth" });
+        $("#alerts-title").focus({ preventScroll: true });
+      });
+      $("#view-alerts").addEventListener("click", () => showToast("Histórico detalhado indisponível neste protótipo."));
+      $("#help-button").addEventListener("click", () => showToast("kW é a potência em um instante; kWh é a energia acumulada. Estimativas não são medições."));
+      $("#report-button").addEventListener("click", () => window.print());
+      $$(".nav a").forEach((link) => {
+        link.addEventListener("click", () => {
+          $$(".nav a").forEach((item) => item.removeAttribute("aria-current"));
+          link.setAttribute("aria-current", "page");
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
