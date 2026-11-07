@@ -179,8 +179,11 @@
     .bottom-grid { grid-template-columns: 1fr 1fr; align-items: start; }
     .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .field { display: grid; gap: 5px; }
-    .field label { color: #68756d; font-size: 9px; font-weight: 650; }
+    .field label, .field-label { color: #68756d; font-size: 9px; font-weight: 650; }
     .field input, .field select { width: 100%; min-width: 0; padding: 8px 9px; color: var(--ink); background: white; border: 1px solid #e4e9e4; border-radius: 7px; font-size: 10px; }
+    .day-options { display: flex; flex-wrap: wrap; gap: 5px; }
+    .day-options label { display: flex; align-items: center; gap: 3px; padding: 6px 7px; color: #68756d; background: #f8faf8; border: 1px solid var(--line); border-radius: 6px; font-size: 9px; }
+    .day-options input { margin: 0; }
     .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
     .primary-button { padding: 8px 12px; color: white; background: var(--green); border: 0; border-radius: 7px; font-size: 10px; font-weight: 700; }
     .primary-button:hover { background: var(--green-dark); }
@@ -325,6 +328,7 @@
       <div class="status-strip" role="status">
         <span class="status-indicator" aria-hidden="true"></span>
         <span><strong>Sem conexão com medidor</strong> · Última leitura de exemplo: hoje, 10:45</span>
+        <span class="status-meta" id="operating-status">Faixa operacional da leitura de exemplo: durante o expediente</span>
         <span class="status-meta">Atualização prevista: a cada 15 min · Dados podem estar desatualizados</span>
       </div>
 
@@ -389,18 +393,18 @@
             <span class="alert-count" id="active-alert-count">2 ativos</span>
           </div>
           <ul class="alert-list" id="alert-list">
-            <li class="alert-item" data-alert-id="outside">
+            <li class="alert-item" data-alert-id="outside" data-state="active">
               <span class="alert-dot"></span>
               <div class="alert-copy"><strong>Consumo após o expediente</strong><span>0,8 kW às 22:30, acima do limite de 0,5 kW. Confira se algum aparelho ficou ligado.</span></div>
               <div class="alert-actions"><button class="mini-button" type="button" data-alert-action="ack">Reconhecer</button><button class="mini-button" type="button" data-alert-action="close">Encerrar</button></div>
             </li>
-            <li class="alert-item" data-alert-id="pattern">
+            <li class="alert-item" data-alert-id="pattern" data-state="active">
               <span class="alert-dot critical"></span>
               <div class="alert-copy"><strong>Pico acima do seu padrão</strong><span>Às 15h, consumo 35% acima da média das quartas-feiras. Ar-condicionado e secadores ligados juntos?</span></div>
               <div class="alert-actions"><button class="mini-button" type="button" data-alert-action="ack">Reconhecer</button><button class="mini-button" type="button" data-alert-action="close">Encerrar</button></div>
             </li>
           </ul>
-          <button class="all-alerts" type="button" id="view-alerts">Ver histórico de alertas</button>
+          <button class="all-alerts" type="button" id="view-alerts" aria-expanded="false">Ver histórico de alertas</button>
         </section>
       </div>
 
@@ -462,14 +466,30 @@
           </div>
           <form id="schedule-form">
             <div class="form-grid">
+              <div class="field" style="grid-column:1/-1">
+                <span class="field-label">Dias de funcionamento</span>
+                <div class="day-options" role="group" aria-label="Dias de funcionamento">
+                  <label><input type="checkbox" name="days" value="1" checked> Seg</label>
+                  <label><input type="checkbox" name="days" value="2" checked> Ter</label>
+                  <label><input type="checkbox" name="days" value="3" checked> Qua</label>
+                  <label><input type="checkbox" name="days" value="4" checked> Qui</label>
+                  <label><input type="checkbox" name="days" value="5" checked> Sex</label>
+                  <label><input type="checkbox" name="days" value="6" checked> Sáb</label>
+                  <label><input type="checkbox" name="days" value="0"> Dom</label>
+                </div>
+              </div>
               <div class="field"><label for="open-time">Abre</label><input id="open-time" name="open" type="time" value="09:00"></div>
               <div class="field"><label for="close-time">Fecha</label><input id="close-time" name="close" type="time" value="19:00"></div>
+              <div class="field"><label for="break-start">Início do intervalo</label><input id="break-start" name="breakStart" type="time" value="13:00"></div>
+              <div class="field"><label for="break-end">Fim do intervalo</label><input id="break-end" name="breakEnd" type="time" value="14:00"></div>
               <div class="field"><label for="off-limit">Limite fora do expediente (kW)</label><input id="off-limit" name="limit" type="number" min="0" step="0.1" value="0.5"></div>
               <div class="field"><label for="tariff">Tarifa estimada (R$/kWh)</label><input id="tariff" name="tariff" type="number" min="0" step="0.01" value="0.82"></div>
               <div class="field"><label for="cost-limit">Limite de custo mensal (R$)</label><input id="cost-limit" name="costLimit" type="number" min="0" step="10" value="600"></div>
               <div class="field"><label for="special-date">Feriado ou horário especial</label><input id="special-date" name="specialDate" type="date"></div>
+              <div class="field"><label for="special-open">Abertura especial</label><input id="special-open" name="specialOpen" type="time"></div>
+              <div class="field"><label for="special-close">Fechamento especial</label><input id="special-close" name="specialClose" type="time"></div>
             </div>
-            <div class="form-actions"><button class="primary-button" type="submit">Salvar configuração</button><span class="form-hint">Dias da semana: seg–sáb · Domingo: fechado<br>Esta demonstração guarda os ajustes neste navegador.</span></div>
+            <div class="form-actions"><button class="primary-button" type="submit">Salvar configuração</button><span class="form-hint">Intervalos e horários especiais ajudam a classificar leituras.<br>Esta demonstração guarda os ajustes neste navegador.</span></div>
           </form>
         </section>
 
@@ -502,7 +522,7 @@
           <div class="summary-stat"><span>Pico de consumo</span><strong>5,6 kW · 15h</strong></div>
           <div class="summary-stat"><span>Fora do expediente</span><strong>18 kWh</strong></div>
         </div>
-        <p class="summary-foot">Inclui alertas: 2 · participação solar no consumo: 68% · valores de referência, não substituem a fatura oficial. Tarifas podem incluir energia, postos, bandeiras, tributos, encargos e créditos de geração; este protótipo aplica somente uma tarifa simplificada definida por você.</p>
+        <p class="summary-foot">Alertas ativos: <strong id="report-alert-count">2</strong> · participação solar no consumo: 68% · valores de referência, não substituem a fatura oficial. Tarifas podem incluir energia, postos, bandeiras, tributos, encargos e créditos de geração; este protótipo aplica somente uma tarifa simplificada definida por você.</p>
       </section>
       <p class="footer-note">Dados demonstrativos para avaliação do protótipo. Nenhum dado pessoal é enviado a um servidor. Esta interface não implementa autenticação, autorização, integrações reais, cobrança ou tratamento de dados para produção.</p>
     </main>
@@ -563,11 +583,40 @@
           const values = JSON.parse(savedSchedule);
           Object.entries(values).forEach(([name, value]) => {
             const field = $(`#schedule-form [name="${name}"]`);
-            if (field && typeof value === "string") field.value = value;
+            if (Array.isArray(value) && name === "days") {
+              $$(`#schedule-form [name="${name}"]`).forEach((checkbox) => { checkbox.checked = value.includes(checkbox.value); });
+            } else if (field && typeof value === "string") {
+              field.value = value;
+            }
           });
         }
       } catch {
         showToast("As configurações salvas não puderam ser lidas.");
+      }
+      updateDemoClassification();
+
+      function updateDemoClassification() {
+        const form = $("#schedule-form");
+        const data = Object.fromEntries(new FormData(form).entries());
+        const selectedDays = new Set(new FormData(form).getAll("days"));
+        let open = data.open;
+        let close = data.close;
+        if (data.specialDate === "2025-06-18") {
+          open = data.specialOpen;
+          close = data.specialClose;
+        } else if (!selectedDays.has("3")) {
+          open = "";
+          close = "";
+        }
+        const reading = "10:45";
+        let classification = "dia sem funcionamento";
+        if (open && close) {
+          if (reading < open) classification = "antes do expediente";
+          else if (reading >= close) classification = "após o expediente";
+          else if (data.breakStart && data.breakEnd && reading >= data.breakStart && reading < data.breakEnd) classification = "intervalo configurado";
+          else classification = "durante o expediente";
+        }
+        $("#operating-status").textContent = `Faixa da leitura de exemplo (qua, 18 jun, 10:45): ${classification}`;
       }
 
       $$(".period-control button").forEach((button) => {
@@ -593,8 +642,10 @@
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const values = Object.fromEntries(formData.entries());
+        values.days = formData.getAll("days");
         try {
           localStorage.setItem("energia-clara-schedule", JSON.stringify(values));
+          updateDemoClassification();
           const rate = Number(values.tariff);
           $("#cost-value").textContent = `R$ ${Math.round(412 * rate).toLocaleString("pt-BR")}`;
           $("#report-cost").textContent = $("#cost-value").textContent;
@@ -685,8 +736,12 @@
         const cause = $("#alert-cause").value;
         const action = $("#alert-action").value.trim();
         if (!action) return;
-        pendingAlert.querySelector(".alert-copy span").textContent += ` · Encerrado: ${cause}; ação: ${action}`;
-        pendingAlert.remove();
+        const history = document.createElement("span");
+        history.textContent = `Encerrado · Causa: ${cause} · Ação: ${action}`;
+        pendingAlert.querySelector(".alert-copy").append(history);
+        pendingAlert.dataset.state = "closed";
+        pendingAlert.hidden = true;
+        pendingAlert.querySelector(".alert-actions").remove();
         pendingAlert = null;
         $("#alert-form").reset();
         alertDialog.close();
@@ -694,10 +749,12 @@
         showToast("Causa e ação registradas; alerta encerrado.");
       });
       function updateAlertCount() {
-        const count = $$("#alert-list .alert-item").length;
+        const count = $$("#alert-list .alert-item[data-state='active']").length;
         $("#active-alert-count").textContent = `${count} ${count === 1 ? "ativo" : "ativos"}`;
+        $("#report-alert-count").textContent = count;
         $("#nav-alert-count").textContent = count;
         $("#nav-alert-count").hidden = count === 0;
+        $("#alert-list .empty-state")?.remove();
         if (!count) {
           const empty = document.createElement("li");
           empty.className = "empty-state";
@@ -719,7 +776,13 @@
         $("#alertas").scrollIntoView({ behavior: "smooth" });
         $("#alerts-title").focus({ preventScroll: true });
       });
-      $("#view-alerts").addEventListener("click", () => showToast("Histórico detalhado indisponível neste protótipo."));
+      $("#view-alerts").addEventListener("click", (event) => {
+        const closedAlerts = $$("#alert-list .alert-item[data-state='closed']");
+        const showHistory = closedAlerts.some((item) => item.hidden);
+        closedAlerts.forEach((item) => { item.hidden = !showHistory; });
+        event.currentTarget.setAttribute("aria-expanded", String(showHistory));
+        event.currentTarget.textContent = showHistory ? "Ocultar histórico" : "Ver histórico de alertas";
+      });
       $("#help-button").addEventListener("click", () => showToast("kW é a potência em um instante; kWh é a energia acumulada. Estimativas não são medições."));
       $("#report-button").addEventListener("click", () => window.print());
       $$(".nav a").forEach((link) => {
